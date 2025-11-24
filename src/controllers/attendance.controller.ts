@@ -20,10 +20,12 @@ export async function markAttendance(req: Request, res: Response) {
 
     const userId = user.rows[0].id;
 
-    // Check last event for multi IN/OUT logic
+    // Check last event
     const last = await pool.query(
       `SELECT event_type FROM attendance_events
-       WHERE user_id=$1 ORDER BY event_time DESC LIMIT 1`,
+       WHERE user_id=$1
+       ORDER BY event_time DESC
+       LIMIT 1`,
       [userId]
     );
 
@@ -32,14 +34,12 @@ export async function markAttendance(req: Request, res: Response) {
       newType = "EXIT";
     }
 
-    const now = new Date();
-    const attDate = now.toISOString().slice(0, 10);
-
+    // Insert using NOW() so PSQL generates accurate timestamp
     const insert = await pool.query(
       `INSERT INTO attendance_events (user_id, event_type, event_time, att_date)
-       VALUES ($1, $2, $3, $4)
+       VALUES ($1, $2, NOW(), CURRENT_DATE)
        RETURNING *`,
-      [userId, newType, now, attDate]
+      [userId, newType]
     );
 
     res.json({
